@@ -2,6 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { AnchorMovieReviewProgram } from "../target/types/anchor_movie_review_program";
 import { expect } from "chai";
+import { getAccount, getAssociatedTokenAddress } from "@solana/spl-token";
 
 describe("anchor-movie-review-program", () => {
   // Configure the client to use the local cluster.
@@ -17,23 +18,42 @@ describe("anchor-movie-review-program", () => {
     rating: 5,
   };
 
+  const [mint] = anchor.web3.PublicKey.findProgramAddressSync(
+    [Buffer.from("mint"), provider.wallet.publicKey.toBuffer()],
+    program.programId
+  );
+
   const [moviePda] = anchor.web3.PublicKey.findProgramAddressSync(
     [Buffer.from(movie.title), provider.publicKey.toBuffer()],
     program.programId
   );
 
-  it("add movie review ", async () => {
-    const tx = await program.methods
-      .addMovieReviewProgram(movie.title, movie.description, movie.rating)
-      .rpc();
-
-    const account = await program.account.movieAccountState.fetch(moviePda);
-
-    expect(movie.title === account.title);
-    expect(movie.rating === account.rating);
-    expect(movie.description === account.description);
-    expect(account.reviewer === provider.wallet.publicKey);
+  it("initialize token mint", async () => {
+    await program.methods.initializeTokenMint().rpc();
   });
+
+  it("Movie review is added`", async () => {
+    const tokenAccount = await getAssociatedTokenAddress(
+      mint,
+      provider.wallet.publicKey
+    )
+    
+    const tx = await program.methods
+      .addMovieReview(movie.title, movie.description, movie.rating)
+      .accounts({
+        tokenAccount: tokenAccount,
+      })
+      .rpc()
+    
+    const account = await program.account.movieAccountState.fetch(movie_pda)
+    expect(account.title).to.equal(movie.title)
+    expect(account.rating).to.equal(movie.rating)
+    expect(account.description).to.equal(movie.description)
+    expect(account.reviewer.toBase58()).to.equal(provider.wallet.publicKey.toBase58())
+  
+    const userAta = await getAccount(provider.connection, tokenAccount)
+    expect(Number(userAta.amount)).to.equal((10 * 10) ^ 6)
+  })
 
   it("update movie review", async () => {
     const newDescription = "Wow this is new";

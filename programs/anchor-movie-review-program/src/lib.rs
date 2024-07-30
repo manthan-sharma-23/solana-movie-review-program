@@ -6,7 +6,7 @@ pub mod constants;
 
 pub use constants::*;
 
-declare_id!("FmzAVsBmJWcfkfe7VrvEi7pLA9ALLDWB3NoU2MvLrCZj");
+declare_id!("BZRT2WuQaBUkRJkFs8yWdph2PNdt7pKzjdyJt9Pd6KLR");
 
 #[program]
 pub mod anchor_movie_review_program {
